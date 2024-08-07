@@ -36,8 +36,14 @@ class Plot():
         self.identifier_length = identifier_length
 
     def run(self):
+        self.create_output_dirs()
+
         self.plot_sequence_length_distribution()
-        self.plot_all_nucleotide_distribution()
+        self.plot_all_nucleotide_distribution(input_file='/barcode_with_sequences_distance_dict.csv')
+        # self.plot_all_nucleotide_distribution(input_file='/barcode_with_sequences_alignment_dict.csv')
+
+    def create_output_dirs(self):
+        os.makedirs(self.plot_path, exist_ok=True)
 
     def plot_sequence_length_distribution(self):
         sequence_lengths = []
@@ -53,18 +59,18 @@ class Plot():
         plt.savefig(self.plot_path + 'sequence_length_distribution.png')
         plt.show()
 
-    def plot_all_nucleotide_distribution(self):
-        self.plot_nucleotide_distribution(plot_parts_of_seq=0)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=1)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=2)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=3)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=0, stacked=False)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=1, stacked=False)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=2, stacked=False)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=3, stacked=False)
+    def plot_all_nucleotide_distribution(self, input_file: Union[str, Path]):
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=0, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=1, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=2, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=3, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=0, stacked=False, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=1, stacked=False, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=2, stacked=False, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=3, stacked=False, input_file=input_file)
 
-    def plot_nucleotide_distribution(self, plot_parts_of_seq: int, stacked=True):
-        with open(self.output_path + '/barcode_with_sequences_distance_dict.csv', 'r') as csv_file:
+    def plot_nucleotide_distribution(self, plot_parts_of_seq: int, input_file: Union[str, Path], stacked=True):
+        with open(self.output_path + input_file, 'r') as csv_file:
             csv_reader = csv.DictReader(csv_file)
 
             # Initialize a dictionary to store sequences for each barcode
@@ -87,21 +93,25 @@ class Plot():
 
                 # Process each barcode once it reaches a certain threshold
                 if len(barcode_sequences[barcode_idx]['sequences']) >= 1000:  # Adjust threshold as needed
-                    self._plot_nucleotide_distribution_for_barcode(barcode, barcode_sequences[barcode],
+                    title = self._plot_nucleotide_distribution_for_barcode(barcode, barcode_sequences[barcode_idx],
                                                                    plot_parts_of_seq, stacked)
                     barcode_sequences[barcode_idx] = {'sequences': []}
 
             # Process remaining sequences for each barcode
             for barcode_idx, data in barcode_sequences.items():
                 if data['sequences']:
-                    self._plot_nucleotide_distribution_for_barcode(barcode_idx, barcode, data, plot_parts_of_seq,
-                                                                   stacked)
+                    title = self._plot_nucleotide_distribution_for_barcode(barcode_idx, barcode, data,
+                                                                           plot_parts_of_seq, stacked)
+            plt.savefig(self.plot_path + f'{barcode_idx}/' + title + '.png')
+            plt.close()
 
-    def _plot_nucleotide_distribution_for_barcode(self, barcode_idx, barcode, data, plot_parts_of_seq: int,
-                                                  stacked=True):
+    # TODO FIX BUG: if we have more then 1000 for each bc, we do not show it in the graph
+    def _plot_nucleotide_distribution_for_barcode(self, barcode_idx, barcode, data, plot_parts_of_seq: int, stacked=True,):
         os.makedirs(self.plot_path + f'{barcode_idx}/', exist_ok=True)
         title = f'nuc dist for bc {barcode_idx}, stacked={stacked}, '
         sequences = []
+        start_positions = []
+        end_positions = []
 
         if plot_parts_of_seq == 0:  # entire seq
             title += 'entire seq'
@@ -119,13 +129,18 @@ class Plot():
                     start_pos = info['start_pos']
                     end_pos = info['end_pos']
                     sequences.append(list(seq_info[start_pos:end_pos]))
+                    start_positions.append(start_pos)
+                    end_positions.append(end_pos)
         elif plot_parts_of_seq == 3:  # only 16 nuc before th BC
             title += 'comb letters and identifier only 16nuc'
             for seq_dict in data['sequences']:
                 for seq_info, info in seq_dict.items():
                     start_pos = info['start_pos']
+                    seq_start_pos = (start_pos - self.identifier_length - self.combinatorial_letters_length)
                     sequences.append(list(
-                        seq_info[(start_pos - self.identifier_length - self.combinatorial_letters_length):start_pos]))
+                        seq_info[seq_start_pos:start_pos]))
+                    start_positions.append(-16)
+                    end_positions.append(-1)
 
         max_length = max(len(seq) for seq in sequences)
 
@@ -147,12 +162,22 @@ class Plot():
         df.index.name = 'Position'
 
         # Plot the histogram
-        fig, ax = plt.subplots(figsize=(40, 6))  # Increase the figure size to make the x-axis wider
+        fig, ax = plt.subplots(figsize=(40, 6))
         df.plot(kind='bar', stacked=stacked, ax=ax, width=1.0)
         plt.title(f'Nucleotide Distribution for Barcode: {barcode_idx}')
         plt.xlabel('Position')
         plt.ylabel('Frequency')
-        plt.xticks(rotation=45)
+        if len(start_positions) != 0 and len(end_positions) != 0:
+            # Generate x-tick labels based on start and end positions
+            xticks = np.arange(max_length)
+            xtick_labels = [f"{start_positions[0] + i}" for i in xticks]  # Modify this logic as per the requirement
+
+            ax.set_xticks(xticks)
+            ax.set_xticklabels(xtick_labels, rotation=45)
+        else:
+            plt.xticks(rotation=45)
         plt.legend(title='Nucleotide')
         plt.savefig(self.plot_path + f'{barcode_idx}/' + title + '.png')
-        plt.show()
+        # plt.show()
+
+        return title
