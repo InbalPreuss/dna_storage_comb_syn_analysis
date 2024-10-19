@@ -73,7 +73,7 @@ class SeqAnalysis:
         self.create_output_dirs()
 
     def run(self):
-        # self.get_sequences_from_file()
+        self.get_sequences_from_file()
         self.get_part_of_seq(seq_part_list=['barcode'], blast_db_fasta=self.blast_db_bc_fasta)
         # self.find_seq_per_barcode_identifier_using_blast(fasta_file=self.blast_db_bc_fasta, blast_db=self.blast_db_bc, query_results_path=self.query_results_path)
 

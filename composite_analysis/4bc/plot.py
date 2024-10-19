@@ -60,9 +60,9 @@ class Plot():
         plt.show()
 
     def plot_all_nucleotide_distribution(self, input_file: Union[str, Path]):
-        # self.plot_nucleotide_distribution(plot_parts_of_seq=0, input_file=input_file)
-        # self.plot_nucleotide_distribution(plot_parts_of_seq=1, input_file=input_file)
-        # self.plot_nucleotide_distribution(plot_parts_of_seq=2, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=0, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=1, input_file=input_file)
+        self.plot_nucleotide_distribution(plot_parts_of_seq=2, input_file=input_file)
         self.plot_nucleotide_distribution(plot_parts_of_seq=3, input_file=input_file)
         self.plot_nucleotide_distribution(plot_parts_of_seq=0, stacked=False, input_file=input_file)
         self.plot_nucleotide_distribution(plot_parts_of_seq=1, stacked=False, input_file=input_file)
