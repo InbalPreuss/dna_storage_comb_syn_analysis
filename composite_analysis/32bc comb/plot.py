@@ -262,8 +262,9 @@ class Plot():
             for _, row in group.iterrows():
                 sequence = row['sequence']
                 start_pos = row['start_pos']
-                for i, nucleotide in enumerate(sequence[start_pos:], start=start_pos):
-                    if i < max_len:
+                # for i, nucleotide in enumerate(sequence[start_pos:], start=start_pos):
+                for i, nucleotide in enumerate(sequence[start_pos:]):
+                    if i < max_len - start_pos:
                         nucleotide_count[nucleotide][i] += 1
                         total_sequences[i] += 1
 
@@ -296,7 +297,7 @@ class Plot():
     def plot_stacked_bars(self, df):
         # For each unique barcode id in the dataframe, plot the stacked bars
         for barcode_id in df['barcode_id'].unique():
-            self.plot_stacked_bar_for_barcode(df, barcode_id, 0, 45)
+            self.plot_stacked_bar_for_barcode(df, barcode_id, 0, 43)
 
     def plot_stacked_bar_for_barcode(self, df, barcode_id, start_pos, end_pos):
         # Filter data for the given barcode id
@@ -316,7 +317,7 @@ class Plot():
                         start_pos:end_pos + 1]
 
         # Prepare data for the stacked bar plot
-        fig, ax = plt.subplots(figsize=(40, 10))
+        fig, ax = plt.subplots(figsize=(45, 15))
 
         # Plot the bars
         bar_width = 0.8
@@ -327,23 +328,31 @@ class Plot():
                         label='T')
 
         # Annotate bars with the actual percentages
-        for bars in [A_bars, C_bars, G_bars, T_bars]:
+        for bars, nucleotide in zip([A_bars, C_bars, G_bars, T_bars], ['A', 'C', 'G', 'T']):
             for bar in bars:
                 height = bar.get_height()
                 if height > 0:
+                    if nucleotide in ['A', 'G']:
+                        text_color = 'white'  # White text for A and G
+                    else:
+                        text_color = 'black'  # Black text for C and T
                     ax.annotate(f'{height:.1f}%',
                                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_y() + height / 2),
-                                xytext=(0, 3),  # 3 points vertical offset
+                                xytext=(0, 25),  # 3 points vertical offset
                                 textcoords="offset points",
-                                ha='center', va='center', fontsize=8, color='white')
+                                ha='center', va='center', fontsize=20, rotation=90, color=text_color)
 
         # Set labels and title
-        ax.set_xlabel('Position in Sequence')
-        ax.set_ylabel('Percentage (%)')
-        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_id})')
+        ax.set_xlabel('Position in Sequence', fontsize=20)
+        ax.set_ylabel('Percentage (%)', fontsize=20)
+        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_id})', fontsize=20)
         ax.set_xticks(positions)
+        ax.set_xticklabels([f'{i}' for i in positions], fontsize=14)  # Set the font size of x-tick labels here
+        ax.tick_params(axis='x', labelsize=20)  # Set x-tick label size
+        ax.tick_params(axis='y', labelsize=20)  # Adjust y-tick label size if needed
+        ax.legend(fontsize=20)
         # ax.set_xticklabels([f'Pos {i}' for i in positions])
-        ax.legend()
+        ax.legend(fontsize=20)
 
         # Save the plot
         plt.savefig(self.plot_path + f'{barcode_id}/' + f'plot_stacked_bar_for_barcode_{start_pos}_{end_pos}.png')
