@@ -57,7 +57,7 @@ class Plot():
         # self.analyze_combinatorial_letters(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
         # self.analyze_combinatorial_letters(nucleotide_csv='output/csv/nucleotide_percentage_single_row_filtered_fixed_seq_length_44_distance_0.csv') #TODO: delete this
 
-        self.calculate_sigma_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
+        self.calculate_foreach_bc_the_max_likelihood_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
 
     def create_output_dirs(self):
         os.makedirs(self.plot_path, exist_ok=True)
@@ -683,7 +683,7 @@ class Plot():
         normalized_probs = {nuc: adjusted_probs[nuc] / normalization_factor for nuc in adjusted_probs}
         return normalized_probs
 
-    def calculate_sigma_per_position(self, count_csv: str):
+    def calculate_foreach_bc_the_max_likelihood_per_position(self, count_csv: str):
         # Load the nucleotide count CSV
         df = pd.read_csv(count_csv)
 
