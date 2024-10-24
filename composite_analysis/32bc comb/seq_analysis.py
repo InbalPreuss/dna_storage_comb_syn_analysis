@@ -95,7 +95,7 @@ class SeqAnalysis:
                     seq_part_from_row = ''
                     for seq_part_i in seq_part_list:
                         seq_part_from_row += row[seq_part_i]
-                    fasta_file.write(f">{int(row['Seq Name'])}\n{seq_part_from_row}\n")
+                    fasta_file.write(f">{int(row['barcode_id'])}\n{seq_part_from_row}\n")
 
     def find_seqs_per_barcodes_using(self, blast_db_fasta: Union[str, Path], distance_method: str, output_file: Union[str, Path]) -> None:
         output_csv_file = self.output_path + output_file
@@ -103,7 +103,7 @@ class SeqAnalysis:
         with open(output_csv_file, "w", newline='') as csv_file:
             csv_writer = csv.writer(csv_file)
             csv_writer.writerow(
-                ["barcode idx", "barcode", "sequence", "distance", "start_pos", "end_pos", "number_of_sequences"])
+                ["barcode_id", "barcode", "sequence", "distance", "start_pos", "end_pos", "number_of_sequences", "sequence_length"])
 
             reads_iter = uts.open_fasta_yield(blast_db_fasta)
             reads_chunk = list(itertools.islice(reads_iter, CHUNK_SIZE))
@@ -120,23 +120,24 @@ class SeqAnalysis:
                 with open(self.sequences_file, "r") as input_handle:
                     for seq in input_handle:
                         seq = seq.strip()
+                        sequence_length = len(seq)
                         if distance_method == 'levenshtein':
                             distance, start_pos, end_pos = uts.is_within_levenshtein_distance(seq=barcode.upper(),
                                                                                               target_seq=seq,
                                                                                               max_distance=self.max_bc_distance)
                             if (distance <= self.max_bc_distance) and (start_pos != math.inf):
-                                matching_sequences.append((seq, distance, start_pos, end_pos))
+                                matching_sequences.append((seq, distance, start_pos, end_pos, sequence_length))
                                 sequence_count += 1
                         elif distance_method == 'alignment':
                             score, start_pos, end_pos = uts.find_best_alignment(seq=barcode.upper(), target_seq=seq, output_file=self.output_path + '/alignment.txt')
                             if score >= 20:
                                 scores.append(score)
-                                matching_sequences.append((seq, score, start_pos, end_pos))
+                                matching_sequences.append((seq, score, start_pos, end_pos, sequence_length))
                                 sequence_count += 1
 
 
-                for seq, distance, start_pos, end_pos in matching_sequences:
-                        csv_writer.writerow([barcode_i, barcode, seq, distance, start_pos, end_pos, sequence_count])
+                for seq, distance, start_pos, end_pos, sequence_length in matching_sequences:
+                        csv_writer.writerow([barcode_i, barcode, seq, distance, start_pos, end_pos, sequence_count, sequence_length])
                 if distance_method == 'alignment':
                     # plot histogram of scores
                     plt.hist(scores)

@@ -59,5 +59,6 @@ if __name__ == '__main__':
                     total_sequence_length_with_adapters=config['total_sequence_length_with_adapters'],
                     alphabet=config['alphabet'],
                     max_bc_distance=config['max_bc_distance'],
-                    combinatorial_letters_length=config['combinatorial_letters_length'])
+                    combinatorial_letters_length=config['combinatorial_letters_length'],
+                    csv_path=config['csv_path'],)
         plot.run()
