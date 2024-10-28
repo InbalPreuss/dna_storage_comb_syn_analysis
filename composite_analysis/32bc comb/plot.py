@@ -50,14 +50,14 @@ class Plot():
         # self.plot_sequence_length_distribution(sequence_range=(41, 41))
         # self.plot_all_nucleotide_distribution(input_file='/barcode_with_sequences_distance_dict.csv')
         # calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
-        calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
+        # calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
         # self.calculate_sequence_percentage_design(self.design_file)
 
         # Example usage
-        # self.analyze_combinatorial_letters(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
-        # self.analyze_combinatorial_letters(nucleotide_csv='output/csv/nucleotide_percentage_single_row_filtered_fixed_seq_length_44_distance_0.csv') #TODO: delete this
+        # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
+        self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_44_distance_0.csv') #TODO: delete this
 
-        self.calculate_foreach_bc_the_max_likelihood_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
+        # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
 
     def create_output_dirs(self):
         os.makedirs(self.plot_path, exist_ok=True)
@@ -602,15 +602,15 @@ class Plot():
 
     import pandas as pd
 
-    def analyze_combinatorial_letters(self, nucleotide_csv,
-                                      combinatorial_letters=['L', 'N', 'I', 'B']):
+    def foreach_bc_and_each_comb_letter_analysis_graph(self, nucleotide_csv,
+                                                       combinatorial_letters=['L', 'N', 'I', 'B']):
         # Load the design CSV and nucleotide percentage CSV
         design_df = pd.read_csv(self.design_file)
         nucleotide_df = pd.read_csv(nucleotide_csv)
 
         # Iterate over each row in the Design CSV (Seq Name and combinatorial letters column)
         for index, row in design_df.iterrows():
-            seq_name = row['Seq Name']
+            seq_name = row['barcode_id']
             # combinatorial_seq = row['combinatorial letters']
             combinatorial_seq = row['sequence without adapters']
             nucleotide_df_barcode_id = nucleotide_df[nucleotide_df['barcode_id'] == seq_name]
@@ -650,18 +650,20 @@ class Plot():
                                      marker='o', linestyle='-')
 
                             # Add horizontal lines at each data point for C and T
-                            for y in percentage_df['C']:
-                                plt.axhline(y=y, color='blue', linestyle='--', linewidth=0.5)  # Horizontal lines for C
-                            for y in percentage_df['T']:
-                                plt.axhline(y=y, color='orange', linestyle='--',
-                                            linewidth=0.5)  # Horizontal lines for T
+                            plt.axhline(y=self.alphabet[letter]['C']*100, color='blue', linestyle='--', linewidth=0.5)  # Horizontal lines for C
+                            plt.axhline(y=self.alphabet[letter]['T']*100, color='orange', linestyle='--', linewidth=0.5)  # Horizontal lines for C
+                            # for y in percentage_df['C']:
+                            #     plt.axhline(y=y, color='blue', linestyle='--', linewidth=0.5)  # Horizontal lines for C
+                            # for y in percentage_df['T']:
+                            #     plt.axhline(y=y, color='orange', linestyle='--',
+                            #                 linewidth=0.5)  # Horizontal lines for T
 
                             # Add labels and title
                             plt.xlabel('Position')
                             plt.ylabel('Percentage')
                             plt.ylim(0, 100)
                             plt.yticks(list(range(0, 100, 10)))
-                            plt.title(f"{letter} - {seq_name}")
+                            plt.title(f"{letter} - {seq_name}, C:{int(self.alphabet[letter]['C']*100)}%, T:{int(self.alphabet[letter]['T']*100)}%")
                             plt.legend()
 
                             # Save the plot
@@ -683,7 +685,7 @@ class Plot():
         normalized_probs = {nuc: adjusted_probs[nuc] / normalization_factor for nuc in adjusted_probs}
         return normalized_probs
 
-    def calculate_foreach_bc_the_max_likelihood_per_position(self, count_csv: str):
+    def calculate_foreach_bc_the_max_likelihood_letter_per_position(self, count_csv: str):
         # Load the nucleotide count CSV
         df = pd.read_csv(count_csv)
 
