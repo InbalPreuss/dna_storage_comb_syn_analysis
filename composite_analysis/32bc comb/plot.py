@@ -50,14 +50,14 @@ class Plot():
         # self.plot_sequence_length_distribution(sequence_range=(41, 41))
         # self.plot_all_nucleotide_distribution(input_file='/barcode_with_sequences_distance_dict.csv')
         # calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
-        # calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
+        calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
         # self.calculate_sequence_percentage_design(self.design_file)
 
         # Example usage
         # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
-        self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_44_distance_0.csv') #TODO: delete this
+        # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_44_distance_0.csv') #TODO: delete this
 
-        # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
+        self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
 
     def create_output_dirs(self):
         os.makedirs(self.plot_path, exist_ok=True)
@@ -359,11 +359,11 @@ class Plot():
         percentage_df_filtered = pd.DataFrame(result_rows_percentage, columns=columns_filtered)
 
         # Save the count CSV file
-        output_csv_path_count = self.csv_path + 'nucleotide_count_per_bc_' + PARAMS_STR + '.csv'
+        output_csv_path_count = self.csv_path + f'nucleotide_count_per_bc_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
         count_df_filtered.to_csv(output_csv_path_count, index=False)
 
         # Save the percentage CSV file
-        output_csv_path_percentage = self.csv_path + 'nucleotide_percentage_per_bc_' + PARAMS_STR + '.csv'
+        output_csv_path_percentage = self.csv_path + f'nucleotide_percentage_per_bc_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
         percentage_df_filtered.to_csv(output_csv_path_percentage, index=False)
 
         # Optionally plot the stacked bar graph for each barcode id (if needed for percentages)
@@ -694,6 +694,7 @@ class Plot():
 
         # List to store the result for each barcode_id and position
         result_rows = []
+        score_rows = []  # List to store the score for each alphabet letter at each position for each barcode_id
 
         # Iterate over each barcode_id in the count CSV
         for index, row in df.iterrows():
@@ -702,6 +703,7 @@ class Plot():
 
             # Store the selected σ for this barcode
             selected_sigmas = []
+            position_scores = {'barcode_id': barcode_id}  # Dictionary to store scores for each position
 
             # For each position in the sequence
             for pos in range(max_len):
@@ -711,6 +713,7 @@ class Plot():
                 # Calculate the score for each sigma (from the adjusted probability dictionary)
                 max_score = -np.inf
                 best_sigma = None
+                scores_for_position = {}
 
                 for sigma, probs in self.alphabet.items():
                     # Adjust probabilities using epsilon
@@ -731,23 +734,35 @@ class Plot():
                         max_score = score
                         best_sigma = sigma
 
+                    # Store the score for the current sigma at this position
+                    scores_for_position[sigma] = score
+
                 # Append the best sigma for this position
                 selected_sigmas.append(best_sigma)
 
+                # Save scores for each sigma at this position
+                for sigma, score in scores_for_position.items():
+                    position_scores[f"{sigma}_{pos}"] = score
+
             # Append the results for this barcode_id
             result_rows.append([barcode_id] + selected_sigmas)
+            score_rows.append(position_scores)  # Append the score row for the current barcode_id
 
         # Generate dynamic column names based on the number of positions
         columns = ['barcode_id'] + [f"Position_{i}" for i in range(max_len)]
 
         # Create a DataFrame to store the results
         result_df = pd.DataFrame(result_rows, columns=columns)
+        score_df = pd.DataFrame(score_rows)
 
-        # Save the results to a new CSV
-        output_csv_path = self.csv_path + 'selected_sigma_per_position.csv'
-        result_df.to_csv(output_csv_path, index=False)
+        # Save the results and scores to new CSVs
+        result_output_csv_path = self.csv_path + f'selected_sigma_per_position_{",".join(self.alphabet.keys())}.csv'
+        scores_output_csv_path = self.csv_path + f'sigma_scores_per_position_{",".join(self.alphabet.keys())}.csv'
 
-        return output_csv_path
+        result_df.to_csv(result_output_csv_path, index=False)
+        score_df.to_csv(scores_output_csv_path, index=False)
+
+        return result_output_csv_path, scores_output_csv_path
 
 
 
