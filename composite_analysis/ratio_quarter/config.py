@@ -1,7 +1,7 @@
 # Description: Configuration file for composite_analysis package.
 # Sequence info:
 # 1-33 adapter
-# 34-43 Combinatorial letters (in this case all 10 N are combination of A,C,G and T, with 1:1:1:1 ratio.)
+# 34-43 Combinatorial letters (in this case all 10 N are combination of A,C,G and T, with 1:1:1:1 ratio_c_t.)
 # 44-49 identifier
 # 50-79 barcode
 # 80-113 adapter
