@@ -66,7 +66,7 @@ class SeqAnalysis:
         self.create_output_dirs()
 
     def run(self):
-        # self.get_sequences_from_file()
+        self.get_sequences_from_file()
         self.get_part_of_seq(seq_part_list=['barcode'], blast_db_fasta=self.blast_db_bc_fasta)
 
         # Levenstein distance

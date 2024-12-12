@@ -11,17 +11,17 @@ def build_config():
         'general_information_file': 'output/csv/general_information.csv',
         'reads_chunk_to_fasta_file': "output/fasta/reads_chunk_to_fasta",
 
-        'sequences_fastq_file': 'data/310_merged_output.fastq',
-        'sequences.unassembled_file': 'data/310_unassembled_forward.fastq',
-        'sequences.assembled_file': 'data/310_unassembled_reverse.fastq',
+        'sequences_fastq_file': 'data/311_merged_output.fastq',
+        'sequences.unassembled_file': 'data/311_unassembled_forward.fastq',
+        'sequences.assembled_file': 'data/311_unassembled_reverse.fastq',
         'design_file': 'data/design.csv',
 
         'sequences_file': 'output/sequences_file.txt',
 
-        'adapter_start_location': [1,33],
-        'barcode_location': [34,51],
-        'combinatorial_location': [52, 64],
-        'adapter_end_location': [65,98],
+        'adapter_start_location': [1,33], # 33
+        'barcode_location': [34,51], # 18
+        'combinatorial_location': [52, 64], # 13
+        'adapter_end_location': [65,98], # 34
         # 'alphabet': {'M': {'A': 0.5, 'C': 0.5, 'G': 0, 'T': 0},
         #              'K': {'A': 0, 'C': 0, 'G': 0.5, 'T': 0.5},
         #              'Y': {'A': 0, 'C': 0.5, 'G': 0, 'T': 0.5},
@@ -90,7 +90,7 @@ def build_config():
         'blast_bc_identifier_results': "output/blast_database/blast_bc_identifier_results.csv",
         'query_results_path': "output/blast_database/query_results.txt",
     }
-    config['barcode_length'] = config['barcode_location'][1] - config['barcode_location'][0] + 1 # 33
+    config['barcode_length'] = config['barcode_location'][1] - config['barcode_location'][0] + 1 # 18
     config['combinatorial_letters_length'] = config['combinatorial_location'][1] - config['combinatorial_location'][0] + 1 # 13
     config['total_sequence_length'] = config['barcode_length'] + config['combinatorial_letters_length'] # 31
     config['adapter_start_location_length'] = config['adapter_start_location'][1] - config['adapter_start_location'][0] + 1 # 33

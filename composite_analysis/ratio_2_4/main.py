@@ -5,7 +5,7 @@ from plot import Plot
 if __name__ == '__main__':
     # call SeqAnalysis class
     config = build_config()
-    if(False):
+    if(True):
         seq_analysis = SeqAnalysis(data_path=config['data_path'],
                                    output_path=config['output_path'],
                                    plot_path=config['plot_path'],
@@ -62,5 +62,6 @@ if __name__ == '__main__':
                     max_bc_distance=config['max_bc_distance'],
                     combinatorial_letters_length=config['combinatorial_letters_length'],
                     csv_path=config['csv_path'],
-                    barcode_with_sequences_distance_dict_file=config['barcode_with_sequences_distance_dict_file'],)
+                    barcode_with_sequences_distance_dict_file=config['barcode_with_sequences_distance_dict_file'],
+                    barcode_length=config['barcode_length'],)
         plot.run()

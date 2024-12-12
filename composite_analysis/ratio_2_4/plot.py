@@ -8,6 +8,7 @@ from typing import Union, List, Dict
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from matplotlib.patches import Rectangle
 
 
 class Plot():
@@ -17,7 +18,7 @@ class Plot():
                  adapter_start_location: List, combinatorial_location: List, design_file: Union[str, Path],
                  barcode_location: List, adapter_end_location: List,
                  total_sequence_length: int, total_sequence_length_with_adapters: int, alphabet: Dict,
-                 max_bc_distance: int, combinatorial_letters_length: int, csv_path: Union[str, Path], barcode_with_sequences_distance_dict_file: Union[str, Path]):
+                 max_bc_distance: int, combinatorial_letters_length: int, csv_path: Union[str, Path], barcode_with_sequences_distance_dict_file: Union[str, Path], barcode_length: int):
         self.sequences_file = sequences_file
         self.plot_path = plot_path
         self.output_path = output_path
@@ -37,12 +38,13 @@ class Plot():
         self.combinatorial_letters_length = combinatorial_letters_length
         self.csv_path = csv_path
         self.barcode_with_sequences_distance_dict_file = barcode_with_sequences_distance_dict_file
+        self.barcode_length = barcode_length
 
     def run(self):
         self.create_output_dirs()
 
-        # self.plot_sequence_length_distribution()
-        # # self.plot_sequence_length_distribution(sequence_range=(0, 48))
+        self.plot_sequence_length_distribution()
+        self.plot_sequence_length_distribution(sequence_range=(0, 40))
         # # self.plot_sequence_length_distribution(sequence_range=(108, 108))
         # # self.plot_sequence_length_distribution(sequence_range=(45, 45))
         # # self.plot_sequence_length_distribution(sequence_range=(44, 44))
@@ -50,8 +52,8 @@ class Plot():
         # # self.plot_sequence_length_distribution(sequence_range=(42, 42))
         # # self.plot_sequence_length_distribution(sequence_range=(41, 41))
         # self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
-        calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
-        calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file='/barcode_with_sequences_distance_dict.csv')
+        ## calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
+        calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file=f'/barcode_with_sequences_distance_dict.csv')
         self.calculate_sequence_percentage_design(self.design_file)
 
         # Example usage
@@ -298,10 +300,12 @@ class Plot():
 
     def calculate_nucleotide_count_and_percentage_per_bc(self, input_file: Union[str, Path]):
         DISTANCE = 0
-        SEQUENCE_LENGTH = 44
+        SEQUENCE_LENGTH = 31
         PARAMS_STR = 'seq_length_' + str(SEQUENCE_LENGTH) + '_distance_' + str(DISTANCE)
 
-        df = pd.read_csv(self.output_path + input_file)
+        count_sequences_df = pd.DataFrame(columns=["barcode_id", "count"])
+
+        df = pd.read_csv(self.csv_path + input_file)
 
         # Filter the dataframe where the 'distance' column is DISTANCE and 'sequence' has SEQUENCE_LENGTH
         df_filtered = df[(df['distance'] == DISTANCE) & (df['sequence'].str.len() == SEQUENCE_LENGTH)]
@@ -315,6 +319,17 @@ class Plot():
 
         # For each group (barcode id)
         for barcode_id, group in grouped:
+
+            if barcode_id not in count_sequences_df['barcode_id'].values:
+                # Add a new row to the DataFrame
+                count_sequences_df = pd.concat([
+                    count_sequences_df,
+                    pd.DataFrame({"barcode_id": [barcode_id], "count": [len(group['sequence'])]})
+                ], ignore_index=True)
+            else:
+                # Update the existing count (if needed)
+                count_sequences_df.loc[count_sequences_df['barcode_id'] == barcode_id, 'count'] = len(group['sequence'])
+
             max_len = group['sequence'].apply(len).max()
             nucleotide_count = defaultdict(lambda: [0] * max_len)
             total_sequences = [0] * max_len
@@ -350,6 +365,10 @@ class Plot():
             result_rows_count.append([barcode_id] + count_row)
             result_rows_percentage.append([barcode_id] + percentage_row)
 
+
+
+
+
         # Dynamically adjust the column names based on the length of the nucleotide count/percentage rows
         num_columns = len(result_rows_count[0]) - 1  # Exclude the barcode_id
         columns_filtered = ['barcode_id'] + [f'{nucleotide}_{i}' for i in range(num_columns // 4) for nucleotide in
@@ -366,6 +385,10 @@ class Plot():
         # Save the percentage CSV file
         output_csv_path_percentage = self.csv_path + f'nucleotide_percentage_per_bc_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
         percentage_df_filtered.to_csv(output_csv_path_percentage, index=False)
+
+        # Save the DataFrame to a CSV file
+        csv_file_path = self.csv_path + f'count_sequences_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
+        count_sequences_df.to_csv(csv_file_path, index=False)
 
         # Optionally plot the stacked bar graph for each barcode id (if needed for percentages)
         self.plot_stacked_bars(df=percentage_df_filtered, params_str=PARAMS_STR)
@@ -440,6 +463,13 @@ class Plot():
             self.plot_stacked_bar_for_barcode(df, barcode_id, START_POS, END_POS, params_str)
 
     def plot_stacked_bar_for_barcode(self, df, barcode_id, start_pos, end_pos, params_str: str):
+        # barcode_id = 13
+        print(f'barcode_id={barcode_id}')
+
+        # Load the sequence from Design.csv
+        design_df = pd.read_csv(self.design_file)
+        sequence = design_df[design_df['barcode_id'] == barcode_id]['sequence without adapters'].values[0]
+
         # Filter data for the given barcode id
         df_barcode = df[df['barcode_id'] == barcode_id]
 
@@ -457,7 +487,7 @@ class Plot():
                         start_pos:end_pos + 1]
 
         # Prepare data for the stacked bar plot
-        fig, ax = plt.subplots(figsize=(45, 15))
+        fig, ax = plt.subplots(figsize=(45, 20))
 
         # Plot the bars
         bar_width = 0.8
@@ -467,41 +497,85 @@ class Plot():
         T_bars = ax.bar(positions, T_percentages, bar_width, bottom=A_percentages + C_percentages + G_percentages,
                         label='T')
 
+        # Add yellow lines based on self.alphabet
+        for pos, letter in zip(positions, sequence):
+            if letter in self.alphabet:
+                props = self.alphabet[letter]
+                cumulative_height = 0
+                for nucleotide, proportion in props.items():
+                    if proportion > 0:
+                        height = proportion * 100  # Convert proportion to percentage
+                        bar_start = pos - 0.4  # Center the yellow line within the bar width
+                        bar_end = pos + 0.4
+                        ax.plot([bar_start, bar_end], [cumulative_height + height, cumulative_height + height],
+                                color='yellow', linewidth=6)
+                        cumulative_height += height
+
         # Annotate bars with the actual percentages
         for bars, nucleotide in zip([A_bars, C_bars, G_bars, T_bars], ['A', 'C', 'G', 'T']):
-            for bar in bars:
+            for bar, letter in zip(bars, sequence):
                 height = bar.get_height()
                 if height > 0:
-                    if nucleotide in ['A', 'G']:
-                        text_color = 'white'  # White text for A and G
-                    else:
-                        text_color = 'black'  # Black text for C and T
+                    text_color = 'white' if nucleotide in ['A', 'G'] else 'black'
                     ax.annotate(f'{height:.1f}%',
                                 xy=(bar.get_x() + bar.get_width() / 2, bar.get_y() + height / 2),
-                                xytext=(0, 25),  # 3 points vertical offset
+                                xytext=(0, 25),
                                 textcoords="offset points",
                                 ha='center', va='center', fontsize=20, rotation=90, color=text_color)
 
+                # Annotate with sequence letter
+                ax.annotate(letter,
+                            xy=(bar.get_x() + bar.get_width() / 2, 103),
+                            ha='center', va='bottom', fontsize=45, color='black')
+
+        # Draw a hollow square over the first 18 bars
+        first_bar_position = positions[0] - bar_width / 2
+        last_bar_position = positions[self.barcode_length - 1] + bar_width / 2
+        rectangle_height = 105
+        rectangle = Rectangle((first_bar_position, 0), last_bar_position - first_bar_position, rectangle_height,
+                              fill=False, edgecolor='purple', linewidth=13)
+        ax.add_patch(rectangle)
+
+        # Place a text label "BC" next to the square
+        ax.text(last_bar_position - 0.5 * (last_bar_position - first_bar_position), -5, 'BC', fontsize=45,
+                va='top', ha='center', color='purple')
+
+        # Add table for self.alphabet
+        cell_text = []
+        row_labels = []
+        for key, values in self.alphabet.items():
+            row_labels.append(key)
+            cell_text.append([f'{int(values[nuc] * 100)}' for nuc in ['A', 'C', 'G', 'T']])
+
+
+        table = ax.table(cellText=cell_text,
+                         rowLabels=row_labels,
+                         colLabels=['A (%)', 'C (%)', 'G (%)', 'T (%)'],
+                         bbox=[1.05, 0.1, 0.2, 0.8])
+        table.auto_set_font_size(False)
+        table.set_fontsize(30)  # Increased font size for better visibility
+        table.scale(0.5, 3)  # Adjusted scale for tighter fit
+
         # Set labels and title
-        ax.set_xlabel('Position in Sequence', fontsize=20)
-        ax.set_ylabel('Percentage (%)', fontsize=20)
-        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_id})', fontsize=20)
+        ax.set_xlabel('Position in Sequence', fontsize=50)
+        ax.set_ylabel('Percentage (%)', fontsize=50)
+        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_id})', fontsize=50, y=1.08)
         ax.set_xticks(positions)
-        ax.set_xticklabels([f'{i}' for i in positions], fontsize=14)  # Set the font size of x-tick labels here
-        ax.tick_params(axis='x', labelsize=20)  # Set x-tick label size
-        ax.tick_params(axis='y', labelsize=20)  # Adjust y-tick label size if needed
-        ax.legend(fontsize=20)
-        # ax.set_xticklabels([f'Pos {i}' for i in positions])
-        ax.legend(fontsize=20)
-        # Set consistent y-axis limits
-        ax.set_ylim(0, 100.5)  # This ensures all percentages are within the range 0 to 100
+        ax.set_xticklabels([f'{i}' for i in positions], fontsize=14)
+        ax.tick_params(axis='x', labelsize=35)
+        ax.tick_params(axis='y', labelsize=35)
+        ax.legend(fontsize=35)
+        ax.set_ylim(0, 103.5)
+        ax.set_xlim(positions[0] - 5, positions[-1] + 5)
+        plt.subplots_adjust(top=0.85)
+        plt.tight_layout()
 
         # Save the plot
-        plt.savefig(self.plot_path + f'{barcode_id}/' + f'plot_stacked_bar_for_barcode_{start_pos}_{end_pos}_'+params_str+'.png')
+        os.makedirs(os.path.dirname(self.plot_path + f'{barcode_id}/'), exist_ok=True)
+        plt.savefig(
+            self.plot_path + f'{barcode_id}/' + f'plot_stacked_bar_for_barcode_{start_pos}_{end_pos}_' + params_str + '.png')
+        plt.close()
 
-        # Show the plot
-        plt.tight_layout()
-        plt.show()
 
     def calculate_sequence_percentage_design(self, input_file: Union[str, Path]):
         """
@@ -512,7 +586,7 @@ class Plot():
 
         # Extract the 'sequence without adapters' column
         sequences = df['sequence without adapters']
-        barcode_idx = df['Seq Name']
+        barcode_idx = df['barcode_id']
 
         # Process each sequence
         for sequence, barcode_idx in zip(sequences, barcode_idx):
@@ -551,6 +625,11 @@ class Plot():
         """
         Plot a stacked bar graph for nucleotide percentages at each position.
         """
+
+        # Load the sequence from Design.csv
+        design_df = pd.read_csv(self.design_file)
+        sequence = design_df[design_df['barcode_id'] == barcode_idx]['sequence without adapters'].values[0]
+
         positions = df['Position']
         A_percentages = df['A']
         C_percentages = df['C']
@@ -558,7 +637,7 @@ class Plot():
         T_percentages = df['T']
 
         # Create the plot
-        fig, ax = plt.subplots(figsize=(45, 15))
+        fig, ax = plt.subplots(figsize=(45, 20))
         bar_width = 0.8
 
         # Plot the stacked bars
@@ -568,10 +647,11 @@ class Plot():
         T_bars = ax.bar(positions, T_percentages, bar_width, bottom=A_percentages + C_percentages + G_percentages,
                         label='T')
 
-        # Annotate bars with the actual percentages
+        # Annotate bars with the actual percentages and sequence letters
         for bars, nucleotide in zip([A_bars, C_bars, G_bars, T_bars], ['A', 'C', 'G', 'T']):
-            for bar in bars:
+            for bar, letter in zip(bars, sequence):
                 height = bar.get_height()
+                # Annotate with percentage
                 if height > 0:
                     text_color = 'white' if nucleotide in ['A', 'G'] else 'black'
                     ax.annotate(f'{height:.1f}%',
@@ -579,29 +659,59 @@ class Plot():
                                 xytext=(0, 25),  # 3 points vertical offset
                                 textcoords="offset points",
                                 ha='center', va='center', fontsize=20, rotation=90, color=text_color)
+                # Annotate with sequence letter
+                ax.annotate(letter,
+                            xy=(bar.get_x() + bar.get_width() / 2, 100),  # place at top of plot area
+                            ha='center', va='bottom', fontsize=45, color='black')
 
+        # Draw a hollow square over the first 18 bars
+        first_bar_position = positions[0] - bar_width / 2  # start slightly before the first bar
+        last_bar_position = positions[self.barcode_length-1] + bar_width / 2  # end slightly after the 18th bar
+        rectangle_height = 105  # slightly higher than the axis limit to cover full bars
+        rectangle = Rectangle((first_bar_position, 0), last_bar_position - first_bar_position, rectangle_height,
+                              fill=False, edgecolor='purple', linewidth=13)
+        ax.add_patch(rectangle)
+
+        # Place a text label "BC" next to the square
+        ax.text(last_bar_position - 0.5 * (last_bar_position - first_bar_position), -5, 'BC', fontsize=45, va='top', ha='center', color='purple')
+
+        # Add table for self.alphabet
+        cell_text = []
+        row_labels = []
+        for key, values in self.alphabet.items():
+            row_labels.append(key)
+            cell_text.append([f'{int(values[nuc] * 100)}' for nuc in ['A', 'C', 'G', 'T']])
+
+        table = ax.table(cellText=cell_text,
+                         rowLabels=row_labels,
+                         colLabels=['A (%)', 'C (%)', 'G (%)', 'T (%)'],
+                         bbox=[1.05, 0.1, 0.2, 0.8])
+        table.auto_set_font_size(False)
+        table.set_fontsize(30)  # Increased font size for better visibility
+        table.scale(0.5, 3)  # Adjusted scale for tighter fit
 
         # Set labels and title
-        ax.set_xlabel('Position in Sequence', fontsize=20)
-        ax.set_ylabel('Percentage (%)', fontsize=20)
-        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_idx})', fontsize=20)
+        ax.set_xlabel('Position in Sequence', fontsize=50)
+        ax.set_ylabel('Percentage (%)', fontsize=50)
+        ax.set_title(f'Nucleotide Percentage at Each Position (Barcode ID {barcode_idx})', fontsize=50,  y=1.08)
         ax.set_xticks(positions)
         ax.set_xticklabels([f'{i}' for i in positions], fontsize=14)  # Set the font size of x-tick labels here
-        ax.tick_params(axis='x', labelsize=20)  # Set x-tick label size
-        ax.tick_params(axis='y', labelsize=20)  # Adjust y-tick label size if needed
-        ax.legend(fontsize=20)
-        # ax.set_xticklabels([f'Pos {i}' for i in positions])
-        ax.legend(fontsize=20)
+        ax.tick_params(axis='x', labelsize=35)  # Set x-tick label size
+        ax.tick_params(axis='y', labelsize=35)  # Adjust y-tick label size if needed
+        ax.legend(fontsize=30)
+
         # Set consistent y-axis limits
         ax.set_ylim(0, 100.5)  # This ensures all percentages are within the range 0 to 100
+        ax.set_xlim(positions.iloc[0] - 5, positions.iloc[-1] + 5)  # Ensure "BC" is within the visible range
+        plt.subplots_adjust(top=0.85)  # Fine-tuned top margin
+        plt.tight_layout()
+
 
         # Save and show the plot
         output_plot_path = self.plot_path + f'{barcode_idx}/sequence_percentage_distribution_design.png'
+        os.makedirs(os.path.dirname(self.plot_path+f'{barcode_idx}/'), exist_ok=True)
         plt.savefig(output_plot_path)
-        plt.tight_layout()
-        plt.show()
-
-    import pandas as pd
+        # plt.show()
 
     def foreach_bc_and_each_comb_letter_analysis_graph(self, nucleotide_csv,
                                                        combinatorial_letters=['L', 'N', 'I', 'B']):
