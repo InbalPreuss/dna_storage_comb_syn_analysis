@@ -9,7 +9,7 @@ from Bio import SeqIO, Align, pairwise2
 
 
 def is_within_levenshtein_distance(bc_seq: str, seq_design:str, read: str, max_distance=4) -> tuple[int, int, int, List[str], int]:
-    distance, start_pos_bc_temp, end_pos, start_pos_read = math.inf, math.inf, math.inf, math.inf
+    distance, start_pos_bc_min_dist, end_pos_bc_min_dist, start_pos_read = math.inf, math.inf, math.inf, math.inf
     annotations = []
     bc_seq_len = len(bc_seq)
     seq_design_len = len(seq_design)
@@ -21,14 +21,15 @@ def is_within_levenshtein_distance(bc_seq: str, seq_design:str, read: str, max_d
         distance = Levenshtein.distance(bc_seq, sub_read)
         if distance <= max_distance:
             max_distance = distance
-            start_pos_bc_temp = start_pos
+            start_pos_bc_min_dist = start_pos
+            end_pos_bc_min_dist = end_pos + 1
 
             # Compute the edit annotations of read compared to seq_design
             start_pos_read = max(0, end_pos- seq_design_len)
-            annotations = compute_edit_annotations(seq_design, read[start_pos_read:end_pos])
+            annotations = compute_edit_annotations(seq_design, read[:end_pos])
 
 
-    return max_distance, start_pos_bc_temp, end_pos, annotations, start_pos_read
+    return max_distance, start_pos_bc_min_dist, end_pos_bc_min_dist, annotations, start_pos_read
 
 
 def get_amount_of_reads_from_file(file_path: Union[Path, str]):

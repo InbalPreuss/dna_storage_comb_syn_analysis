@@ -5,7 +5,7 @@ from plot import Plot
 if __name__ == '__main__':
     # call SeqAnalysis class
     config = build_config()
-    if(False):
+    if(True):
         seq_analysis = SeqAnalysis(data_path=config['data_path'],
                                    output_path=config['output_path'],
                                    plot_path=config['plot_path'],

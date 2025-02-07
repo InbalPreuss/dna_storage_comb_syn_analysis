@@ -54,7 +54,7 @@ class Plot():
 
         # self.plot_sequence_length_distribution()
         # self.plot_sequence_length_distribution(sequence_range=(20, 40))
-        # self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
+        self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
         # ## calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
         # calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file=f'/barcode_with_sequences_distance_dict.csv')
         # self.calculate_sequence_percentage_design(self.design_file)
@@ -65,19 +65,15 @@ class Plot():
         # #
         # # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
         #
-        self.plot_error_distribution()
-        self.plot_long_deletion_error_distribution(long_d_th=1)
-        self.plot_long_deletion_error_distribution(long_d_th=2)
-        self.plot_long_deletion_error_distribution(long_d_th=3)
-        self.plot_long_deletion_error_distribution(long_d_th=4)
-        self.plot_long_deletion_error_distribution(long_d_th=5)
-        self.plot_long_deletion_error_distribution(long_d_th=6)
-        self.plot_long_deletion_error_distribution(long_d_th=7)
-        # self.plot_long_del_error_distribution(long_d_th=1)
-        # self.plot_long_del_error_distribution(long_d_th=2)
-        # self.plot_long_del_error_distribution(long_d_th=3)
-        # self.plot_long_del_error_distribution(long_d_th=4)
-        # self.plot_long_del_error_distribution(long_d_th=5)
+        # self.plot_error_distribution()
+        # self.plot_long_deletion_error_distribution(long_d_th=1)
+        # self.plot_long_deletion_error_distribution(long_d_th=2)
+        # self.plot_long_deletion_error_distribution(long_d_th=3)
+        # self.plot_long_deletion_error_distribution(long_d_th=4)
+        # self.plot_long_deletion_error_distribution(long_d_th=5)
+        # self.plot_long_deletion_error_distribution(long_d_th=6)
+        # self.plot_long_deletion_error_distribution(long_d_th=7)
+
 
     def create_output_dirs(self):
         os.makedirs(self.plot_path, exist_ok=True)
@@ -136,14 +132,14 @@ class Plot():
         plt.show()
 
     def plot_all_nucleotide_distribution(self, input_file: Union[str, Path]):
-        self.plot_nucleotide_distribution(plot_parts_of_seq=0, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=0, input_file=input_file)
         self.plot_nucleotide_distribution(plot_parts_of_seq=1, input_file=input_file)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=2, input_file=input_file)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=3, input_file=input_file)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=0, stacked=False, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=2, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=3, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=0, stacked=False, input_file=input_file)
         self.plot_nucleotide_distribution(plot_parts_of_seq=1, stacked=False, input_file=input_file)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=2, stacked=False, input_file=input_file)
-        self.plot_nucleotide_distribution(plot_parts_of_seq=3, stacked=False, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=2, stacked=False, input_file=input_file)
+        # self.plot_nucleotide_distribution(plot_parts_of_seq=3, stacked=False, input_file=input_file)
 
     def plot_nucleotide_distribution(self, plot_parts_of_seq: int, input_file: Union[str, Path], stacked=True):
         with open(self.output_path + input_file, 'r') as csv_file:
@@ -200,7 +196,7 @@ class Plot():
             for seq_dict in data['sequences']:
                 for seq_info, info in seq_dict.items():
                     end_pos = info['end_pos']
-                    sequences.append(list(seq_info[:end_pos]))
+                    sequences.append(list(seq_info[:end_pos-1]))
 
                 # Adjust sequence alignment to the right
             max_length = max(len(seq) for seq in sequences)
