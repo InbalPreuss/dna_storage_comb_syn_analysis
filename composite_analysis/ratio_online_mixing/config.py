@@ -11,17 +11,19 @@ def build_config():
         'general_information_file': 'output/csv/general_information.csv',
         'reads_chunk_to_fasta_file': "output/fasta/reads_chunk_to_fasta",
 
-        'sequences_fastq_file': 'data/315_merged_output.fastq',
+        'sequences_fastq_file': 'data/24625_S5_L001_merged.fastq.gz',
         'sequences.unassembled_file': 'data/315_unassembled_forward.fastq',
-        'sequences.assembled_file': 'data/315_unassembled_reverse.fastq',
+        'sequences.assembled_file': 'data/315_unassembled_reverse.fastq.gz',
+        'sequences_R1_fastq_file': 'data/24625_S5_L001_R1_001.fastq.gz',
+        'sequences_R2_fastq_file': 'data/24625_S5_L001_R2_001.fastq.gz',
         'design_file': 'data/design.csv',
 
         'sequences_file': 'output/sequences_file.txt',
 
-        'adapter_start_location': [1,33], # 33
-        'barcode_location': [34,51], # 18
-        'combinatorial_location': [52, 64], # 13
-        'adapter_end_location': [65,98], # 34
+        'adapter_start_location': [1,20], # 33
+        'barcode_location': [21,31], # 18
+        'combinatorial_location': [32, 65], # 13
+        'adapter_end_location': [66,86], # 34
         # 'alphabet': {'M': {'A': 0.5, 'C': 0.5, 'G': 0, 'T': 0},
         #              'K': {'A': 0, 'C': 0, 'G': 0.5, 'T': 0.5},
         #              'Y': {'A': 0, 'C': 0.5, 'G': 0, 'T': 0.5},
@@ -41,27 +43,32 @@ def build_config():
         #              'c': {'A': 0, 'C': 1, 'G': 0, 'T': 0},
         #              'g': {'A': 0, 'C': 0, 'G': 1, 'T': 0},
         #              't': {'A': 0, 'C': 0, 'G': 0, 'T': 1},},
-        'alphabet': {'M': {'A': 0.5, 'C': 0.5, 'G': 0, 'T': 0},
-                     'K': {'A': 0, 'C': 0, 'G': 0.5, 'T': 0.5},
-                     'Y': {'A': 0, 'C': 0.5, 'G': 0, 'T': 0.5},
-                     'R': {'A': 0.5, 'C': 0, 'G': 0.5, 'T': 0},
-                     'W': {'A': 0.5, 'C': 0, 'G': 0, 'T': 0.5},
-                     'S': {'A': 0, 'C': 0.5, 'G': 0.5, 'T': 0},
-                     'V': {'A': 0.33, 'C': 0.33, 'G': 0.33, 'T': 0},
-                     'B': {'A': 0, 'C': 0.33, 'G': 0.33, 'T': 0.33},
-                     'D': {'A': 0.33, 'C': 0, 'G': 0.33, 'T': 0.33},
-                     'H': {'A': 0.33, 'C': 0.33, 'G': 0, 'T': 0.33},
-                     '4': {'A': 0, 'C': 0.6, 'G': 0, 'T': 0.4},
-                     '3': {'A': 0, 'C': 0.7, 'G': 0, 'T': 0.3},
-                     '2': {'A': 0, 'C': 0.8, 'G': 0, 'T': 0.2},
-                     '1': {'A': 0, 'C': 0.9, 'G': 0, 'T': 0.1},
-                     'N': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+        'alphabet': {
+                    # 'M': {'A': 0.5, 'C': 0.5, 'G': 0, 'T': 0},
+                     # 'K': {'A': 0, 'C': 0, 'G': 0.5, 'T': 0.5},
+                     # 'Y': {'A': 0, 'C': 0.5, 'G': 0, 'T': 0.5},
+                     # 'R': {'A': 0.5, 'C': 0, 'G': 0.5, 'T': 0},
+                     # 'W': {'A': 0.5, 'C': 0, 'G': 0, 'T': 0.5},
+                     # 'S': {'A': 0, 'C': 0.5, 'G': 0.5, 'T': 0},
+                     # 'V': {'A': 0.33, 'C': 0.33, 'G': 0.33, 'T': 0},
+                     # 'B': {'A': 0, 'C': 0.33, 'G': 0.33, 'T': 0.33},
+                     # 'D': {'A': 0.33, 'C': 0, 'G': 0.33, 'T': 0.33},
+                     # 'H': {'A': 0.33, 'C': 0.33, 'G': 0, 'T': 0.33},
+                     # '4': {'A': 0, 'C': 0.6, 'G': 0, 'T': 0.4},
+                     # '3': {'A': 0, 'C': 0.7, 'G': 0, 'T': 0.3},
+                     # '2': {'A': 0, 'C': 0.8, 'G': 0, 'T': 0.2},
+                     # '1': {'A': 0, 'C': 0.9, 'G': 0, 'T': 0.1},
+                     # 'N': {'A': 0.25, 'C': 0.25, 'G': 0.25, 'T': 0.25},
+                     'E': {'A': 0, 'C': 0.33, 'G': 0, 'T': 0.67},
+                     'F': {'A': 0, 'C': 0.67, 'G': 0, 'T': 0.33},
+                     'J': {'A': 0, 'C': 0.40, 'G': 0, 'T': 0.60},
+                     'L': {'A': 0, 'C': 0.74, 'G': 0, 'T': 0.26},
                      'A': {'A': 1, 'C': 0, 'G': 0, 'T': 0},
                      'C': {'A': 0, 'C': 1, 'G': 0, 'T': 0},
                      'G': {'A': 0, 'C': 0, 'G': 1, 'T': 0},
                      'T': {'A': 0, 'C': 0, 'G': 0, 'T': 1}, },
 
-        'amount_of_bc': 42,
+        'amount_of_bc': 27,
 
         'max_bc_distance': 2,
         'th_minimum_len_reads_to_analyse': 1,
