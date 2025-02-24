@@ -21,7 +21,7 @@ class Plot():
                  barcode_location: List, adapter_end_location: List,
                  total_sequence_length: int, total_sequence_length_with_adapters: int, alphabet: Dict,
                  max_bc_distance: int, combinatorial_letters_length: int, csv_path: Union[str, Path],
-                 barcode_with_sequences_distance_dict_file: Union[str, Path], barcode_length: int):
+                 barcode_with_sequences_distance_dict_file: Union[str, Path], barcode_length: int,):
         self.sequences_file = sequences_file
         self.plot_path = plot_path
         self.output_path = output_path
@@ -46,25 +46,27 @@ class Plot():
     def run(self):
         self.create_output_dirs()
 
-        # self.plot_sequence_length_distribution()
-        # self.plot_sequence_length_distribution(sequence_range=(99, 150))
+        # # self.plot_sequence_length_distribution()
+        # # self.plot_sequence_length_distribution(sequence_range=(99, 150))
+        #
+        # # self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
+        # # calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
+        # calculate_nucleotide_count_per_bc_file, calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_count_and_percentage_per_bc(
+        #     input_file=f'/barcode_with_sequences_distance_dict.csv')
+        # self.calculate_sequence_percentage_design(self.design_file)
+        #
+        # # Example usage
+        # self.foreach_bc_and_each_comb_letter_analysis_graph(
+        #     nucleotide_percentage_csv=calculate_nucleotide_percentage_per_bc_file,
+        #     combinatorial_letters=['C', 'T', 'L', 'E', 'F', 'J'])
+        # # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_59_distance_0.csv') #TODO: delete this
+        #
+        # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
+        #
+        # self.calculate_foreach_bc_the_kl_divergence_compared_to_design(
+        #     nucleotide_percentage_csv=calculate_nucleotide_percentage_per_bc_file)
 
-        # self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
-        # calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
-        calculate_nucleotide_count_per_bc_file, calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_count_and_percentage_per_bc(
-            input_file=f'/barcode_with_sequences_distance_dict.csv')
-        self.calculate_sequence_percentage_design(self.design_file)
-
-        # Example usage
-        self.foreach_bc_and_each_comb_letter_analysis_graph(
-            nucleotide_percentage_csv=calculate_nucleotide_percentage_per_bc_file,
-            combinatorial_letters=['C', 'T', 'L', 'E', 'F', 'J'])
-        # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_59_distance_0.csv') #TODO: delete this
-
-        self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
-
-        self.calculate_foreach_bc_the_kl_divergence_compared_to_design(
-            nucleotide_percentage_csv=calculate_nucleotide_percentage_per_bc_file)
+        self.histogram_of_first_non_composite_letter_deletion()
 
     def create_output_dirs(self):
         os.makedirs(self.plot_path, exist_ok=True)
@@ -948,3 +950,98 @@ class Plot():
             plt.tight_layout()
             plt.savefig(f"{self.plot_path}/{barcode_id}/kl_divergence_plot.png")
             plt.show()
+
+    def histogram_of_first_non_composite_letter_deletion(self, composite_letters=['L', 'E', 'F', 'J']):
+        '''
+        In this function, go over each barcode, and each sequence in that barcode,
+        and for each non-composite letter, find the first mismatch letter for the barcode sequence design.
+        Each mismatch letter is counted and written into a csv, and the histogram is plotted for each barcode.
+        :return: None
+        '''
+
+        DISTANCE = 0
+        SEQUENCE_LENGTH = 59
+
+        # Load the design CSV and barcode_with_sequences_distance_dict.csv file
+        design_df = pd.read_csv(self.design_file)
+        df = pd.read_csv(self.output_path + self.barcode_with_sequences_distance_dict_file)
+
+        # Filter the dataframe where the 'distance' column is DISTANCE and 'sequence' has SEQUENCE_LENGTH
+        df_filtered = df[(df['distance'] <= DISTANCE) & (df['sequence'].str.len() >= SEQUENCE_LENGTH)]
+
+        # Iterate over each barcode in the design CSV
+        for index, row in design_df.iterrows():
+            design_sequence = row['sequence']
+            barcode_id = row['barcode_id']
+            barcode_df = df_filtered[df_filtered['barcode_id'] == barcode_id]
+
+            # Create a dictionary to store the sequence characters and their mismatch counts
+            mismatch_counts = [0] * len(design_sequence)
+
+            # Iterate over each sequence in the barcode
+            for _, sequence_row in barcode_df.iterrows():
+                start_pos = sequence_row['start_pos']
+                sequence = sequence_row['sequence'][start_pos:]
+
+                # Iterate over each position in the sequence
+                for pos, letter in enumerate(sequence):
+                    if pos >= len(design_sequence):
+                        break
+                    # print(f'barcode_id={barcode_id}, pos={pos}, letter={letter}')
+                    # Find the corresponding letter in the design sequence
+                    design_letter = design_sequence[pos]
+
+                    # Skip composite letters
+                    if design_letter in composite_letters:
+                        continue
+
+                    # If the letters do not match, increment the mismatch count
+                    if letter != design_letter:
+                        mismatch_counts[pos] += 1
+                        break
+
+            # Convert the results to a DataFrame
+            # result_df = pd.DataFrame(mismatch_counts, design_sequence, columns=['Letter', 'Mismatch_Count'])
+
+            # Writing to CSV
+            csv_file_path = self.csv_path + f'{barcode_id}/first_mismatch_counts.csv'
+            with open(csv_file_path, mode="w", newline="") as file:
+                writer = csv.writer(file)
+
+                # Write the header
+                writer.writerow(["design sequence", "mismatch count"])
+
+                # Write the data
+                for char, count in zip(design_sequence, mismatch_counts):
+                    writer.writerow([char, count])
+
+            # # Save the results to a CSV file
+            # csv_file_path = self.csv_path + f'{barcode_id}/first_mismatch_counts.csv'
+            # os.makedirs(os.path.dirname(csv_file_path), exist_ok=True)
+            # result_df.to_csv(csv_file_path, index=False)
+
+            # Creating position-based x-axis labels
+            position_labels = [f"{i + 1}{char}" for i, char in enumerate(design_sequence)]
+
+            # Creating the histogram with position-based labels
+            plt.figure(figsize=(14, 6))
+            plt.bar(position_labels, mismatch_counts)
+
+            # Formatting the plot
+            plt.xlabel("Position and Character in Design Sequence")
+            plt.ylabel("Mismatch Count")
+            plt.title(f"BC{barcode_id} - Histogram of Mismatch Counts per Position in Design Sequence")
+            plt.xticks(rotation=90, fontsize=8)  # Rotate x-ticks for better readability
+            plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+            # # Plot the histogram
+            # plt.figure(figsize=(15, 5))
+            # plt.bar(result_df['Letter'], result_df['Mismatch_Count'])
+            # plt.xlabel('Letter')
+            # plt.ylabel('Mismatch Count')
+            # plt.title(f'First Mismatch Count for Barcode ID {barcode_id}')
+            # plt.tight_layout()
+            plt.savefig(self.plot_path + f'{barcode_id}/first_mismatch_histogram.png')
+            plt.close()
+
+
