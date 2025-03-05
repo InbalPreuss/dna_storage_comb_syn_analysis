@@ -52,27 +52,29 @@ class Plot():
     def run(self):
         self.create_output_dirs()
 
-        # self.plot_sequence_length_distribution()
-        # self.plot_sequence_length_distribution(sequence_range=(20, 40))
+        self.plot_sequence_length_distribution()
+        self.plot_sequence_length_distribution(sequence_range=(20, 40))
         self.plot_all_nucleotide_distribution(input_file=self.barcode_with_sequences_distance_dict_file)
-        # ## calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
-        # calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= self.calculate_nucleotide_count_and_percentage_per_bc(input_file=f'/barcode_with_sequences_distance_dict.csv')
-        # self.calculate_sequence_percentage_design(self.design_file)
-        # #
-        # # # Example usage
-        # # # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
-        # # # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_44_distance_0.csv') #TODO: delete this
-        # #
-        # # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
+
+        calculate_nucleotide_percentage_per_bc_file,  calculate_nucleotide_count_per_bc_file= (
+            self.calculate_nucleotide_count_and_percentage_per_bc(input_file=f'/barcode_with_sequences_distance_dict.csv'))
+        self.calculate_sequence_percentage_design(self.design_file)
+
+        self.plot_error_distribution()
+        self.plot_long_deletion_error_distribution(long_d_th=1)
+        self.plot_long_deletion_error_distribution(long_d_th=2)
+        self.plot_long_deletion_error_distribution(long_d_th=3)
+        self.plot_long_deletion_error_distribution(long_d_th=4)
+        self.plot_long_deletion_error_distribution(long_d_th=5)
+        self.plot_long_deletion_error_distribution(long_d_th=6)
+        self.plot_long_deletion_error_distribution(long_d_th=7)
+
+        # Trash
+        ## calculate_nucleotide_percentage_per_bc_file = self.calculate_nucleotide_percentage_per_bc(input_file=self.barcode_with_sequences_distance_dict_file)
+        # # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv=calculate_nucleotide_percentage_per_bc_file) #TODO: uncomment this
+        # # self.foreach_bc_and_each_comb_letter_analysis_graph(nucleotide_csv='output/csv/nucleotide_percentage_per_bc_seq_length_44_distance_0.csv') #TODO: delete this
         #
-        # self.plot_error_distribution()
-        # self.plot_long_deletion_error_distribution(long_d_th=1)
-        # self.plot_long_deletion_error_distribution(long_d_th=2)
-        # self.plot_long_deletion_error_distribution(long_d_th=3)
-        # self.plot_long_deletion_error_distribution(long_d_th=4)
-        # self.plot_long_deletion_error_distribution(long_d_th=5)
-        # self.plot_long_deletion_error_distribution(long_d_th=6)
-        # self.plot_long_deletion_error_distribution(long_d_th=7)
+        # self.calculate_foreach_bc_the_max_likelihood_letter_per_position(count_csv=calculate_nucleotide_count_per_bc_file)
 
 
     def create_output_dirs(self):
@@ -195,17 +197,7 @@ class Plot():
             title += 'comb letters and bc'
             for seq_dict in data['sequences']:
                 for seq_info, info in seq_dict.items():
-                    end_pos = info['end_pos']
-                    sequences.append(list(seq_info[:end_pos-1]))
-
-                # Adjust sequence alignment to the right
-            max_length = max(len(seq) for seq in sequences)
-            aligned_sequences = []
-            for seq in sequences:
-                shift = max_length - len(seq)  # Shift to align right
-                aligned_sequences.append(['-'] * shift + seq)  # Add '-' padding at the start
-
-            sequences = aligned_sequences  # Replace original sequences
+                    sequences.append(list(seq_info))
 
         elif plot_parts_of_seq == 2:  # only bc
             title += 'only bc'
@@ -325,42 +317,47 @@ class Plot():
 
     def calculate_nucleotide_count_and_percentage_per_bc(self, input_file: Union[str, Path]):
         DISTANCE = 0
-        SEQUENCE_LENGTH = 31
-        PARAMS_STR = 'seq_length_' + str(SEQUENCE_LENGTH) + '_distance_' + str(DISTANCE)
+        PARAMS_STR = 'seq_length_distance_' + str(DISTANCE)
 
         count_sequences_df = pd.DataFrame(columns=["barcode_id", "count"])
 
-        df = pd.read_csv(self.csv_path + input_file)
+        ###########################################################################
 
-        # Filter the dataframe where the 'distance' column is DISTANCE and 'sequence' has SEQUENCE_LENGTH
-        df_filtered = df[(df['distance'] == DISTANCE) & (df['sequence'].str.len() == SEQUENCE_LENGTH)]
+        df_design = pd.read_csv(self.design_file)
+        df = pd.read_csv(self.csv_path + input_file)
 
         # Dictionary to store the results for each barcode
         result_rows_percentage = []
         result_rows_count = []
 
-        # Group the dataframe by 'barcode id'
-        grouped = df_filtered.groupby('barcode_id')
+        # Going over each barcode in the design file
+        for index, row in df_design.iterrows():
+            barcode_id = row['barcode_id']
+            seq_design_length = len(row['sequence'])
 
-        # For each group (barcode id)
-        for barcode_id, group in grouped:
+            # Filter the dataframe where the 'distance' column is DISTANCE and 'sequence' has SEQUENCE_LENGTH
+            df_filtered = df[(df['distance'] == DISTANCE) & (df['sequence'].str.len() >= seq_design_length) & (df['barcode_id'] == barcode_id)]
 
             if barcode_id not in count_sequences_df['barcode_id'].values:
                 # Add a new row to the DataFrame
                 count_sequences_df = pd.concat([
                     count_sequences_df,
-                    pd.DataFrame({"barcode_id": [barcode_id], "count": [len(group['sequence'])]})
+                    pd.DataFrame({"barcode_id": [barcode_id], "count": [len(df_filtered['sequence'])]})
                 ], ignore_index=True)
             else:
                 # Update the existing count (if needed)
-                count_sequences_df.loc[count_sequences_df['barcode_id'] == barcode_id, 'count'] = len(group['sequence'])
+                count_sequences_df.loc[count_sequences_df['barcode_id'] == barcode_id, 'count'] = len(df_filtered['sequence'])
 
-            max_len = group['sequence'].apply(len).max()
+            max_len = df_filtered['sequence'].apply(len).max()
             nucleotide_count = defaultdict(lambda: [0] * max_len)
-            total_sequences = [0] * max_len
+            try:
+                total_sequences = [0] * max_len
+            except:
+                print(f'max_len={max_len}')
+                print(f'barcode_id={barcode_id}')
 
             # Process each sequence in the group
-            for _, row in group.iterrows():
+            for _, row in df_filtered.iterrows():
                 sequence = row['sequence']
                 start_pos = row['start_pos']
 
@@ -390,9 +387,8 @@ class Plot():
             result_rows_count.append([barcode_id] + count_row)
             result_rows_percentage.append([barcode_id] + percentage_row)
 
-
         # Dynamically adjust the column names based on the length of the nucleotide count/percentage rows
-        num_columns = len(result_rows_count[0]) - 1  # Exclude the barcode_id
+        num_columns = len(max(result_rows_count))  # Exclude the barcode_id
         columns_filtered = ['barcode_id'] + [f'{nucleotide}_{i}' for i in range(num_columns // 4) for nucleotide in
                                              'ACGT']
 
@@ -413,9 +409,99 @@ class Plot():
         count_sequences_df.to_csv(csv_file_path, index=False)
 
         # Optionally plot the stacked bar graph for each barcode id (if needed for percentages)
-        self.plot_stacked_bars(df=percentage_df_filtered, params_str=PARAMS_STR)
+        self.plot_stacked_bars(df=percentage_df_filtered, params_str=PARAMS_STR, df_design=df_design)
 
         return output_csv_path_count, output_csv_path_percentage
+
+
+        ###################################################################################
+
+        # df = pd.read_csv(self.csv_path + input_file)
+        #
+        # # Filter the dataframe where the 'distance' column is DISTANCE and 'sequence' has SEQUENCE_LENGTH
+        # df_filtered = df[(df['distance'] == DISTANCE) & (df['sequence'].str.len() == SEQUENCE_LENGTH)]
+        #
+        # # Dictionary to store the results for each barcode
+        # result_rows_percentage = []
+        # result_rows_count = []
+        #
+        # # Group the dataframe by 'barcode id'
+        # grouped = df_filtered.groupby('barcode_id')
+        #
+        # # For each group (barcode id)
+        # for barcode_id, group in grouped:
+        #
+        #     if barcode_id not in count_sequences_df['barcode_id'].values:
+        #         # Add a new row to the DataFrame
+        #         count_sequences_df = pd.concat([
+        #             count_sequences_df,
+        #             pd.DataFrame({"barcode_id": [barcode_id], "count": [len(group['sequence'])]})
+        #         ], ignore_index=True)
+        #     else:
+        #         # Update the existing count (if needed)
+        #         count_sequences_df.loc[count_sequences_df['barcode_id'] == barcode_id, 'count'] = len(group['sequence'])
+        #
+        #     max_len = group['sequence'].apply(len).max()
+        #     nucleotide_count = defaultdict(lambda: [0] * max_len)
+        #     total_sequences = [0] * max_len
+        #
+        #     # Process each sequence in the group
+        #     for _, row in group.iterrows():
+        #         sequence = row['sequence']
+        #         start_pos = row['start_pos']
+        #
+        #         # Count nucleotides at each position
+        #         for i, nucleotide in enumerate(sequence[start_pos:]):
+        #             if i < max_len - start_pos:
+        #                 nucleotide_count[nucleotide][i] += 1
+        #                 total_sequences[i] += 1
+        #
+        #     # Save the count of each nucleotide at each position
+        #     count_row = []
+        #     percentage_row = []
+        #
+        #     for i in range(max_len):
+        #         if total_sequences[i] > 0:
+        #             for nucleotide in 'ACGT':
+        #                 # Add counts to count_row
+        #                 count_row.append(nucleotide_count[nucleotide][i])
+        #                 # Add percentages to percentage_row
+        #                 percentage_row.append((nucleotide_count[nucleotide][i] / total_sequences[i]) * 100)
+        #         else:
+        #             # Append 0 for both counts and percentages if no sequence at this position
+        #             count_row.extend([0, 0, 0, 0])
+        #             percentage_row.extend([0, 0, 0, 0])
+        #
+        #     # Append rows for both count and percentage
+        #     result_rows_count.append([barcode_id] + count_row)
+        #     result_rows_percentage.append([barcode_id] + percentage_row)
+        #
+        #
+        # # Dynamically adjust the column names based on the length of the nucleotide count/percentage rows
+        # num_columns = len(result_rows_count) - 1  # Exclude the barcode_id
+        # columns_filtered = ['barcode_id'] + [f'{nucleotide}_{i}' for i in range(num_columns // 4) for nucleotide in
+        #                                      'ACGT']
+        #
+        # # Create DataFrames for the filtered results
+        # count_df_filtered = pd.DataFrame(result_rows_count, columns=columns_filtered)
+        # percentage_df_filtered = pd.DataFrame(result_rows_percentage, columns=columns_filtered)
+        #
+        # # Save the count CSV file
+        # output_csv_path_count = self.csv_path + f'nucleotide_count_per_bc_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
+        # count_df_filtered.to_csv(output_csv_path_count, index=False)
+        #
+        # # Save the percentage CSV file
+        # output_csv_path_percentage = self.csv_path + f'nucleotide_percentage_per_bc_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
+        # percentage_df_filtered.to_csv(output_csv_path_percentage, index=False)
+        #
+        # # Save the DataFrame to a CSV file
+        # csv_file_path = self.csv_path + f'count_sequences_{PARAMS_STR}_{",".join(self.alphabet.keys())}.csv'
+        # count_sequences_df.to_csv(csv_file_path, index=False)
+        #
+        # # Optionally plot the stacked bar graph for each barcode id (if needed for percentages)
+        # self.plot_stacked_bars(df=percentage_df_filtered, params_str=PARAMS_STR)
+        #
+        # return output_csv_path_count, output_csv_path_percentage
     def calculate_nucleotide_percentage_per_bc(self, input_file: Union[str, Path]):
         DISTANCE = 0
         SEQUENCE_LENGTH = 31
@@ -476,12 +562,12 @@ class Plot():
 
         return output_csv_path_filtered
 
-    def plot_stacked_bars(self, df, params_str: str):
+    def plot_stacked_bars(self, df: pd.DataFrame, params_str: str, df_design: pd.DataFrame):
         START_POS = 0
-        END_POS = 43
 
         # For each unique barcode id in the dataframe, plot the stacked bars
         for barcode_id in df['barcode_id'].unique():
+            END_POS = len(df_design[df_design['barcode_id'] == barcode_id]['sequence'].values[0]) - 1
             self.plot_stacked_bar_for_barcode(df, barcode_id, START_POS, END_POS, params_str)
 
     def plot_stacked_bar_for_barcode(self, df, barcode_id, start_pos, end_pos, params_str: str):
@@ -490,7 +576,7 @@ class Plot():
 
         # Load the sequence from Design.csv
         design_df = pd.read_csv(self.design_file)
-        sequence = design_df[design_df['barcode_id'] == barcode_id]['sequence without adapters'].values[0]
+        sequence = design_df[design_df['barcode_id'] == barcode_id]['sequence'].values[0]
 
         # Filter data for the given barcode id
         df_barcode = df[df['barcode_id'] == barcode_id]
@@ -601,13 +687,13 @@ class Plot():
 
     def calculate_sequence_percentage_design(self, input_file: Union[str, Path]):
         """
-        Calculate the nucleotide percentage for each position in the 'sequence without adapters' column based on the
+        Calculate the nucleotide percentage for each position in the 'sequence' column based on the
         config['alphabet'] mapping, and generate a stacked bar plot.
         """
         df = pd.read_csv(input_file)
 
-        # Extract the 'sequence without adapters' column
-        sequences = df['sequence without adapters']
+        # Extract the 'sequence' column
+        sequences = df['sequence']
         barcode_idx = df['barcode_id']
 
         # Process each sequence
@@ -650,7 +736,7 @@ class Plot():
 
         # Load the sequence from Design.csv
         design_df = pd.read_csv(self.design_file)
-        sequence = design_df[design_df['barcode_id'] == barcode_idx]['sequence without adapters'].values[0]
+        sequence = design_df[design_df['barcode_id'] == barcode_idx]['sequence'].values[0]
 
         positions = df['Position']
         A_percentages = df['A']
@@ -745,7 +831,7 @@ class Plot():
         for index, row in design_df.iterrows():
             seq_name = row['barcode_id']
             # combinatorial_seq = row['combinatorial letters']
-            combinatorial_seq = row['sequence without adapters']
+            combinatorial_seq = row['sequence']
             nucleotide_df_barcode_id = nucleotide_df[nucleotide_df['barcode_id'] == seq_name]
 
             # Create a dictionary to store the positions and percentages for each combinatorial letter found
@@ -936,41 +1022,52 @@ class Plot():
                 deletion_counts[pos] = (df[pos] == "D").sum()
                 insertion_counts[pos] = (df[pos] == "I").sum()
 
-            # Convert to lists for plotting
+            # # Convert to lists for plotting
+            # positions = [f"{nuc}" for i, nuc in enumerate(renamed_positions)]
+            # sub_values = list(substitution_counts.values())
+            # del_values = list(deletion_counts.values())
+            # ins_values = list(insertion_counts.values())
+
+            # Calculate percentages
+            total_sequences = len(df)
+            if total_sequences > 0:
+                sub_percentages = [count / total_sequences * 100 for count in substitution_counts.values()]
+                del_percentages = [count / total_sequences * 100 for count in deletion_counts.values()]
+                ins_percentages = [count / total_sequences * 100 for count in insertion_counts.values()]
+            else:
+                sub_percentages = del_percentages = ins_percentages = [0] * len(renamed_positions)
+
             positions = [f"{nuc}" for i, nuc in enumerate(renamed_positions)]
-            sub_values = list(substitution_counts.values())
-            del_values = list(deletion_counts.values())
-            ins_values = list(insertion_counts.values())
 
             # plt.xticks(list(design_seq))
 
             # Plot Substitutions
             plt.figure(figsize=(12, 6))
             plt.tight_layout()
-            plt.bar(positions, sub_values)
+            plt.bar(positions, sub_percentages)
             plt.xlabel("Position (Nucleotide)")
-            plt.ylabel("Count of Substitutions (S)")
-            plt.title("Distribution of Substitution Errors")
+            plt.ylabel("Percentage of Substitutions (S) %")
+            plt.title("Distribution of Substitution Errors (%)")
             plt.xticks(rotation=90)
             plt.savefig(self.plot_path + f'{barcode_i}/' + f"{distance_method}_Substitution" + '.png')
 
             # Plot Deletions
             plt.figure(figsize=(12, 6))
             plt.tight_layout()
-            plt.bar(positions, del_values)
+            plt.bar(positions, del_percentages)
             plt.xlabel("Position (Nucleotide)")
-            plt.ylabel("Count of Deletions (D)")
-            plt.title("Distribution of Deletion Errors")
+            plt.ylabel("Percentage of Deletions (D) %")
+            plt.title("Distribution of Deletion Errors (%)")
             plt.xticks(rotation=90)
             plt.savefig(self.plot_path + f'{barcode_i}/' + f"{distance_method}_Deletions" + '.png')
 
             # Plot Insertions
             plt.figure(figsize=(12, 6))
             plt.tight_layout()
-            plt.bar(positions, ins_values)
+            plt.bar(positions, ins_percentages)
             plt.xlabel("Position (Nucleotide)")
-            plt.ylabel("Count of Insertions (I)")
-            plt.title("Distribution of Insertion Errors")
+            plt.ylabel("Percentage of Insertions (I) %")
+            plt.title("Distribution of Insertion Errors (%)")
             plt.xticks(rotation=90)
             plt.savefig(self.plot_path + f'{barcode_i}/' + f"{distance_method}_Insertion" + '.png')
 
@@ -1069,6 +1166,7 @@ class Plot():
 
             # Initialize long deletion counts
             long_deletion_counts = {pos: 0 for pos in renamed_positions}
+            total_sequences = len(df)  # Total number of sequences in the dataset
 
             # Iterate over rows to track long deletions
             for _, row in df.iterrows():
@@ -1097,19 +1195,39 @@ class Plot():
                 if deletion_streak >= long_d_th:
                     long_deletion_counts[renamed_positions[-deletion_streak]] += 1  # Assign to start of streak
 
+            # # Convert to lists for plotting
+            # positions = renamed_positions
+            # long_del_values = list(long_deletion_counts.values())
+            #
+            # # Plot Long Deletions
+            # plt.figure(figsize=(12, 6))
+            # plt.tight_layout()
+            # plt.bar(positions, long_del_values)
+            # plt.xlabel("Position (Nucleotide)")
+            # plt.ylabel(f"Count of Long Deletions (≥{long_d_th})")
+            # plt.title(f"Distribution of Long Deletions (Threshold = {long_d_th})")
+            # plt.xticks(rotation=90)
+            # plt.savefig(self.plot_path + f'{barcode_i}/' + f"{distance_method}_LongDeletions_{long_d_th}.png")
+            # plt.close()
+
+            # Convert counts to percentages
+            long_deletion_percentages = {pos: (count / total_sequences) * 100 for pos, count in
+                                         long_deletion_counts.items()}
+
             # Convert to lists for plotting
             positions = renamed_positions
-            long_del_values = list(long_deletion_counts.values())
+            long_del_values = list(long_deletion_percentages.values())
 
-            # Plot Long Deletions
+            # Plot Long Deletions as Percentages
             plt.figure(figsize=(12, 6))
             plt.tight_layout()
             plt.bar(positions, long_del_values)
             plt.xlabel("Position (Nucleotide)")
-            plt.ylabel(f"Count of Long Deletions (≥{long_d_th})")
-            plt.title(f"Distribution of Long Deletions (Threshold = {long_d_th})")
+            plt.ylabel(f"Percentage of Long Deletions (≥{long_d_th})")
+            plt.title(f"Distribution of Long Deletions as Percentage (Threshold = {long_d_th})")
             plt.xticks(rotation=90)
-            plt.savefig(self.plot_path + f'{barcode_i}/' + f"{distance_method}_LongDeletions_{long_d_th}.png")
+            plt.savefig(
+                self.plot_path + f'{barcode_i}/' + f"{distance_method}_LongDeletions_{long_d_th}_percentage.png")
             plt.close()
 
 

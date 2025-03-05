@@ -1,0 +1,20 @@
+Writing mergable reads merged.
+Started output threads.
+Total time: 0.620 seconds.
+
+Pairs:                  43669
+Joined:                 26480           60.638%
+Ambiguous:              0               0.000%
+No Solution:            17181           39.344%
+Too Short:              8               0.018%
+
+Avg Insert:             28.0
+Standard Deviation:     3.5
+Mode:                   31
+
+Insert range:           15 - 75
+90th percentile:        31
+75th percentile:        30
+50th percentile:        29
+25th percentile:        27
+10th percentile:        23

@@ -1,5 +1,6 @@
 import csv
 import math
+import os
 from pathlib import Path
 from typing import Union, List, Dict
 from itertools import product
@@ -8,12 +9,105 @@ import Levenshtein
 from Bio import SeqIO, Align, pairwise2
 
 
-def is_within_levenshtein_distance(bc_seq: str, seq_design:str, read: str, max_distance=4) -> tuple[int, int, int, List[str], int]:
+# def trim_adapters_from_read(read: str, seq_adapter1: str, seq_adapter2: str, start_pos_bc: int, end_pos_bc: int) -> str:
+#     """
+#     Trims adapter sequences from the left and right sides of a read if they overlap
+#     by at least 2 nucleotides.
+#
+#     :param read: The original sequence read.
+#     :param seq_adapter1: The left adapter sequence.
+#     :param seq_adapter2: The right adapter sequence.
+#     :return: The trimmed sequence.
+#     """
+#
+#     def find_overlap(sequence, adapter, from_end=True):
+#         """Finds the longest overlap of at least 2 nucleotides between sequence and adapter."""
+#         min_overlap = 2  # Minimum required overlap to trim
+#         max_overlap = min(len(sequence), len(adapter))
+#         temp_i = 0
+#
+#         for i in range(max_overlap, min_overlap - 1, -1):
+#             if from_end:
+#                 if sequence[-i:] == adapter[:i]:
+#                     temp_i = i
+#             else:
+#                 if sequence[:i] == adapter[-i:]:
+#                     temp_i = i
+#
+#         return temp_i
+#
+#     # Trim left adapter
+#     left_trim = find_overlap(read, str(seq_adapter1), from_end=False)
+#     if left_trim > 0:
+#         read = read[left_trim:]
+#
+#     # Trim right adapter
+#     right_trim = find_overlap(read, str(seq_adapter2), from_end=True)
+#     if right_trim > 0:
+#         read = read[:-right_trim]
+#
+#     return read
+
+def trim_adapters_from_read(read: str, seq_adapter1: str, seq_adapter2: str, start_pos_bc: int, end_pos_bc: int) -> str:
+    """
+    Trims adapter sequences from the left and right sides of a read if they overlap
+    by at least 2 nucleotides, ensuring that trimming does not affect the region
+    between start_pos_bc and end_pos_bc.
+
+    :param read: The original sequence read.
+    :param seq_adapter1: The left adapter sequence.
+    :param seq_adapter2: The right adapter sequence.
+    :param start_pos_bc: Start position of the barcode, which should not be trimmed.
+    :param end_pos_bc: End position of the barcode, which should not be trimmed.
+    :return: The trimmed sequence.
+    """
+
+    def find_overlap(sequence, adapter, from_end=True, limit_start=0, limit_end=None):
+        """Finds the longest overlap of at least 2 nucleotides between sequence and adapter within allowed boundaries."""
+        min_overlap = 2  # Minimum required overlap to trim
+        max_overlap = min(len(sequence), len(adapter))
+        temp_i = 0
+
+        for i in range(max_overlap, min_overlap - 1, -1):
+            if from_end:
+                if limit_start <= len(sequence) - i and sequence[-i:] == adapter[:i]:
+                    temp_i = i
+            else:
+                if limit_end is None or i <= limit_end:
+                    if sequence[:i] == adapter[-i:]:
+                        temp_i = i
+
+        return temp_i
+
+    # Trim left adapter only before start_pos_bc
+    left_trim = find_overlap(read[:start_pos_bc], seq_adapter1, from_end=False)
+    if left_trim > 0:
+        read = read[left_trim:]
+        start_pos_bc -= left_trim
+        end_pos_bc -= left_trim
+
+    # Trim right adapter only after end_pos_bc
+    right_trim = find_overlap(read[end_pos_bc:], seq_adapter2, from_end=True)
+    if right_trim > 0:
+        read = read[:-right_trim]
+
+    return read
+
+
+def is_within_levenshtein_distance(bc_seq: str, seq_design:str, read: str, max_distance: int,
+                                   seq_adapter1: str, seq_adapter2: str, is_trim=True) -> tuple[int, int, int, List[str], str]:
+    """
+        Calculates Levenshtein distance between the barcode and a read.
+        Returns distance, start positions, and annotations.
+    """
+
     distance, start_pos_bc_min_dist, end_pos_bc_min_dist, start_pos_read = math.inf, math.inf, math.inf, math.inf
     annotations = []
     bc_seq_len = len(bc_seq)
     seq_design_len = len(seq_design)
     read_len = len(read)
+
+    trimmed_read = read
 
     for start_pos in range(read_len - bc_seq_len + 1):
         end_pos = start_pos + bc_seq_len
@@ -24,12 +118,18 @@ def is_within_levenshtein_distance(bc_seq: str, seq_design:str, read: str, max_d
             start_pos_bc_min_dist = start_pos
             end_pos_bc_min_dist = end_pos + 1
 
+            # If is trimmed, then trim the adapters got in the design from the read
+            if is_trim:
+                trimmed_read = trim_adapters_from_read(read, seq_adapter1, seq_adapter2, start_pos_bc_min_dist, end_pos_bc_min_dist)
+
             # Compute the edit annotations of read compared to seq_design
-            start_pos_read = max(0, end_pos- seq_design_len)
-            annotations = compute_edit_annotations(seq_design, read[:end_pos])
+            # start_pos_read = max(0, end_pos - seq_design_len)
+            # annotations = compute_edit_annotations(seq_design, read[:end_pos])
+            annotations = compute_edit_annotations(seq_design, trimmed_read[start_pos:start_pos+seq_design_len])
 
 
-    return max_distance, start_pos_bc_min_dist, end_pos_bc_min_dist, annotations, start_pos_read
+    # return max_distance, start_pos_bc_min_dist, end_pos_bc_min_dist, annotations, start_pos_read
+    return max_distance, start_pos_bc_min_dist, end_pos_bc_min_dist, annotations, trimmed_read
 
 
 def get_amount_of_reads_from_file(file_path: Union[Path, str]):
@@ -219,3 +319,9 @@ def find_best_alignment(seq, target_seq, output_file: Union[str, Path]):
 #     end_position = best_alignment.aligned[0][0][1]
 #
 #     return best_score, start_position, end_position, best_alignment
+
+# Ensure the directory exists before writing any file
+def ensure_directory_exists(file_path):
+    """Creates the directory for the given file if it doesn't exist."""
+    dir_path = os.path.dirname(file_path)
+    os.makedirs(dir_path, exist_ok=True)
